@@ -1,0 +1,12 @@
+{
+    "id": "com.matentv.lg",
+    "version": "1.0.0",
+    "vendor": "Maten",
+    "type": "web",
+    "main": "index.html",
+    "title": "Maten TV Pro",
+    "icon": "icon.png",
+    "largeIcon": "icon.png",
+    "bgColor": "#000000",
+    "resolution": "1920x1080"
+}
