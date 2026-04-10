@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Maten TV LG</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #000; }
+        #webviewFrame { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; z-index: 1; }
+        #lgPlayerContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBsdBBTuCA0cQL8QtJkSPYy8N_Dmr3K_bI",
+            authDomain: "maten-tv.firebaseapp.com",
+            projectId: "maten-tv",
+            storageBucket: "maten-tv.firebasestorage.app",
+            messagingSenderId: "196479152493",
+            appId: "1:196479152493:web:82860b7f878a47b731ea64",
+            measurementId: "G-0BB5EY6TNW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let secretUserAgent = "MatenTV_Offline_Secret_Backup";
+        let lgHlsPlayer = null;
+
+        async function fetchSecret() {
+            try {
+                const docRef = doc(db, "settings", "adConfig");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().secretUserAgent) {
+                    secretUserAgent = docSnap.data().secretUserAgent;
+                    console.log("Secret loaded from Firebase.");
+                }
+            } catch (e) {
+                console.error("Firebase Error:", e);
+            }
+        }
+        fetchSecret();
+
+        const lgPlayerContainer = document.getElementById('lgPlayerContainer');
+        const lgVideo = document.getElementById('lgVideo');
+
+        window.MatenApp = {
+            playVideoWithBuffer: function(url, title, isHeavyBuffer) {
+                lgPlayerContainer.style.display = 'block';
+
+                if (lgHlsPlayer) {
+                    lgHlsPlayer.destroy();
+                }
+
+                let finalUrl = url;
+                if (url.includes('proxy.php') || url.includes('workers.dev')) {
+                    finalUrl += (url.includes('?') ? '&' : '?') + 'secret=' + secretUserAgent;
+                }
+
+                if (Hls.isSupported()) {
+                    lgHlsPlayer = new Hls({
+                        maxBufferLength: isHeavyBuffer ? 50 : 15,
+                        maxMaxBufferLength: isHeavyBuffer ? 60 : 20
+                    });
+                    lgHlsPlayer.loadSource(finalUrl);
+                    lgHlsPlayer.attachMedia(lgVideo);
+                    lgHlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
+                        lgVideo.play();
+                    });
+                } else if (lgVideo.canPlayType('application/vnd.apple.mpegurl')) {
+                    lgVideo.src = finalUrl;
+                    lgVideo.play();
+                }
+            },
+
+            stopVideo: function() {
+                lgVideo.pause();
+                if (lgHlsPlayer) {
+                    lgHlsPlayer.destroy();
+                    lgHlsPlayer = null;
+                }
+                lgPlayerContainer.style.display = 'none';
+            },
+
+            toggleNativeFullscreen: function() {
+            },
+
+            androidGoBack: function() {
+                if (lgPlayerContainer.style.display === 'block') {
+                    window.MatenApp.stopVideo();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', function(event) {
+            if (event.keyCode === 461 || event.key === "Backspace") { 
+                if (lgPlayerContainer.style.display === 'block') {
+                    event.preventDefault();
+                    window.MatenApp.stopVideo();
+                }
+            }
+        });
+
+    </script>
+</head>
+<body>
+    <iframe id="webviewFrame" src="https://maten-tv.win"></iframe>
+    <div id="lgPlayerContainer">
+        <video id="lgVideo" controls></video>
+    </div>
+</body>
+</html>
